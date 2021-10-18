@@ -38,6 +38,9 @@ else
 
     joinNodeRoleTemp=($(kubectl get node -o wide | awk '{print $3}'))
 
+
+    masterNodeIPs=()
+
     for ((i=0; i<${#joinNodeIPTemp[@]}; i++)); do
             ip=${joinNodeIPTemp[i]}
             name=${joinNodeNameTemp[i]}
@@ -45,12 +48,17 @@ else
 
             if valid_ip $ip;
             then
-                    if [[ ! "$role" == "master" ]];
+                    if [[ ! "$role" =~ "master" ]];
                     then
+                            echo $ip
                             joinNodeIPs+=($ip)
                             joinNodeNames+=($name)
+                    else
+                            masterNodeIPs+=($ip)
                     fi
             fi
+
+
 
     done
 
@@ -59,13 +67,12 @@ else
 
     change_worker_node_num=$(($target_worker_node_num-$current_worker_node_num))
 
-
     if [ "$change_worker_node_num" -gt 0 ]; then
             for ((i=0; i<$change_worker_node_num; i++))
             do
                     while read p;
                     do
-                            if [[ ! " ${joinNodeIPs[*]} " == *$p* ]];
+                            if [[ ! " ${joinNodeIPs[*]} " == *$p* ]] && [[ ! " ${masterNodeIPs[*]} " == *$p* ]];
                             then
                                     echo "Node Join Start : $p"
 
@@ -81,7 +88,8 @@ else
                                     kubectl get node
                                     #echo "Success Node Join: $p"
                                     break
-
+                            else
+                                    echo "Nothing to join"
                             fi
                     done < $filename
             done
